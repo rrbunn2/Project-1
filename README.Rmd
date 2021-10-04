@@ -3,19 +3,121 @@ title: "ReadMe"
 ---
 
 #Required Packages
-` `
+`tidyverse`
 
 
-```{r cars}
-summary(cars)
+```{r libraries, echo=FALSE}
+library(tidyverse)
+library(httr)
+library(jsonlite)
+```
+#API Functions
+
+##Berries
+```{r}
+berry <- function(type,specific="",limit=100){
+  limit = as.character(limit)
+  if(!is_character(type)){
+    stop("Error: Must be string")
+  }
+  base <- "https://pokeapi.co/api/v2"
+  if(type=="berry"){
+    hyperlink <- paste0(base,"/berry/",specific,"/?limit=",limit)
+    a<-GET(hyperlink)
+    data <- fromJSON(rawToChar(a$content))
+    if(specific != ""){
+    return(data$item)}
+    else{
+      return(data$results)}
+  }
+    else if (type=="firmness"){
+      hyperlink <- paste0(base,"/berry-firmness/",specific,"/?limit=",limit)
+      a<-GET(hyperlink)
+      data <- fromJSON(rawToChar(a$content))
+      if(specific != ""){
+    return(data$berries)}
+    else{
+      return(data$results)}
+  }
+      else if(type=="flavor"){
+        hyperlink <- paste0(base,"/berry-flavor/",specific,"/?limit=",limit)
+        a<-GET(hyperlink)
+        data <- fromJSON(rawToChar(a$content))
+        if(specific != ""){
+    return(data$berries)}
+    else{
+      return(data$results)}
+  }
+        else{
+          stop("Error: Must be one of berry,firmness,flavor")
+        }
+}
+#testing
+out<- berry(type="berry",specific = "cheri")
+new <- berry(type = "firmness",specific = "soft")
+fin <- berry(type = "flavor",specific ="spicy" )
+
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+##Moves
+```{r}
+move <- function(type,specific="",val="",limit=1000){
+  if(!is_character(type) || !is_character(val)){
+    stop("Error: Must be string")
+  }
+  if(type == "move"){
+  base <- "https://pokeapi.co/api/v2/move/"
+  link<-paste0(base,specific,"/?limit=",limit)
+  a<- GET(link)
+  r<- fromJSON((rawToChar(a$content)))
+  if(val != ""){return(unlist(r[val]))}
+  return(r$results)
+  }
+  if(type == "category"){
+      base <- "https://pokeapi.co/api/v2/move-category/"
+      link<-paste0(base,specific,"/?limit=",limit)
+      a<- GET(link)
+      r<- fromJSON((rawToChar(a$content)))
+      return(r$results)
+  }
+  
+  if(type == "class"){
+      base <- "https://pokeapi.co/api/v2/move-damage-class/"
+  link<-paste0(base,specific,"/?limit=",limit)
+  a<- GET(link)
+  r<- fromJSON((rawToChar(a$content)))
+  return(r$results)
+  }
+  zu <- "https://pokeapi.co/api/v2/move-damage-class/"
+  c<- GET(zu)
+  truee <- fromJSON((rawToChar(c$content)))
+}
+#testing
+au <- move(type="move",specific = "overheat", val="accuracy")
+bu <- move(type="move")
+a <- move(type="move",specific = "overheat", val="power")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+##Pokemon
+```{r}
+  pokemon <- function(){}
+```
+
+
+##Wrapper
+```{r}
+  API_Wrapper <- function(fun,...){
+    if(!is_character(fun)){
+    stop("Error: Must be string for fun")
+  }
+    if(fun="berry"){}
+      else if(fun="move"){}
+        else if(fun="pokemon"){}
+          else{
+            stop("Error: Not a valid Function")
+    }
+  }
+```
+
+#Exploratory Data Analysis
