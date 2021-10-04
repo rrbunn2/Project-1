@@ -52,6 +52,8 @@ berry <- function(type,specific="",limit=100){
           stop("Error: Must be one of berry,firmness,flavor")
         }
 }
+```
+```
 #testing
 out<- berry(type="berry",specific = "cheri")
 new <- berry(type = "firmness",specific = "soft")
@@ -73,35 +75,77 @@ move <- function(type,specific="",val="",limit=1000){
   r<- fromJSON((rawToChar(a$content)))
   if(val != ""){return(unlist(r[val]))}
   return(r$results)
-  }
-  if(type == "category"){
+  }else if(type == "category"){
       base <- "https://pokeapi.co/api/v2/move-category/"
       link<-paste0(base,specific,"/?limit=",limit)
       a<- GET(link)
       r<- fromJSON((rawToChar(a$content)))
-      return(r$results)
+      if(specific != "") return(r$moves)
+      else{return(r$results)}
+  } else  if(type == "class"){
+    base <- "https://pokeapi.co/api/v2/move-damage-class/"
+    link<-paste0(base,specific,"/?limit=",limit)
+    a<- GET(link)
+    r<- fromJSON((rawToChar(a$content)))
+    if(specific != ""){return(r$moves)}
+    else{return(r$results)}
+  } else {
+    stop("Error: Must be one of move,category,class")
   }
-  
-  if(type == "class"){
-      base <- "https://pokeapi.co/api/v2/move-damage-class/"
-  link<-paste0(base,specific,"/?limit=",limit)
-  a<- GET(link)
-  r<- fromJSON((rawToChar(a$content)))
-  return(r$results)
-  }
-  zu <- "https://pokeapi.co/api/v2/move-damage-class/"
-  c<- GET(zu)
-  truee <- fromJSON((rawToChar(c$content)))
 }
+```
+```
 #testing
 au <- move(type="move",specific = "overheat", val="accuracy")
-bu <- move(type="move")
+bu <- move(type="category",specific = "damage")
 a <- move(type="move",specific = "overheat", val="power")
 ```
 
 ##Pokemon
 ```{r}
-  pokemon <- function(){}
+  pokemon <- function(type,specific="",inc=TRUE,limit=1000){
+    if(!is_character(type)){
+      stop("Error: Must be string")
+    } 
+  
+    if(type=="ability"){
+      base <- "https://pokeapi.co/api/v2/ability/"
+      link <- paste0(base,specific,"/?limit=",limit)
+      a <- GET(link)
+      r<- fromJSON(rawToChar(a$content))
+      if(specific != ""){return(r$pokemon)}
+      return(r)
+    }
+    if(type == "pokemon"){
+      base <- "https://pokeapi.co/api/v2/pokemon/"
+      link <- paste0(base,specific,"/?limit=",limit)
+      a <- GET(link)
+      r<- fromJSON(rawToChar(a$content))
+      if(specific!= ""){return(r$weight)}
+      else {return(r)}
+    }
+    if(type == "stats"){
+      base <- "https://pokeapi.co/api/v2/stat/"
+      link <- paste0(base,specific,"/?limit=",limit)
+      a <- GET(link)
+      r<- fromJSON(rawToChar(a$content))
+      if(specific!=""){
+        if(inc){return(r$affecting_moves$increase)}
+        else{return(r$affecting_moves$decrease)}
+      }
+      else{return(r$results)}
+    }
+  }
+  
+```
+
+```
+  z<-pokemon(type="stats",specific = "attack")
+  temp <- "https://pokeapi.co/api/v2/ability/"
+  temp2 <- "https://pokeapi.co/api/v2/ability/stench"
+  a <- GET(temp3)
+  b <- fromJSON((rawToChar(a$content)))
+  temp3<- "https://pokeapi.co/api/v2/stat/"
 ```
 
 
@@ -109,14 +153,19 @@ a <- move(type="move",specific = "overheat", val="power")
 ```{r}
   API_Wrapper <- function(fun,...){
     if(!is_character(fun)){
-    stop("Error: Must be string for fun")
+    stop("Error: Must be string for function")
   }
-    if(fun="berry"){}
-      else if(fun="move"){}
-        else if(fun="pokemon"){}
-          else{
-            stop("Error: Not a valid Function")
+    if(fun=="berry"){
+      berry(...)
     }
+      else if(fun=="move"){
+        move(...)
+      }
+        else if(fun=="pokemon"){
+          pokemon(...)
+        }
+          else{
+            stop("Error: fun must be one of berry, move, pokemon")}
   }
 ```
 
