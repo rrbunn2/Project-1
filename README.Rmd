@@ -1,21 +1,37 @@
 ---
 title: "ReadMe"
 ---
-
 #Required Packages
-`tidyverse`
+For obtaining information from the Pokemon API and the subsequent data analysis the following packages were used
 
+`tidyverse`
+`httr`
+`jsonlite`
+`ggplot2`
 
 ```{r libraries, echo=FALSE}
 library(tidyverse)
 library(httr)
 library(jsonlite)
+library(ggplot2)
 ```
 #API Functions
+##Results Dataframe
+As the following functions are designed to be used on a single variable input this function takes in an object made using the `lapply()` function and outputs a nice dataframe.
+```{r dataframe}
+  ResultsToDataframe<- function(object){
+    object<-as.numeric(as.character(object))
+    object<-unlist(object)
+    object<-as.data.frame(object)
+    object[sapply(object, is.na)] = 0
+    return(object)
+  }
+```
 
 ##Berries
-```{r}
-berry <- function(type,specific="",limit=100){
+This function is designed to extract information on berries, the `type` variable allows for information to be extracted based upon berry type, firmness, or flavor. In addition the `specific` variable when not specificed extracts data on the different subvariables. When `specific` is specified, as one of the subvariables, more detailed information can be extracted.
+```{r berry}
+berry <- function(type,specific="",val="",limit=100){
   limit = as.character(limit)
   if(!is_character(type)){
     stop("Error: Must be string")
@@ -25,8 +41,9 @@ berry <- function(type,specific="",limit=100){
     hyperlink <- paste0(base,"/berry/",specific,"/?limit=",limit)
     a<-GET(hyperlink)
     data <- fromJSON(rawToChar(a$content))
+    if(val!=""){return(data[[val]])}
     if(specific != ""){
-    return(data$item)}
+    return(data)}
     else{
       return(data$results)}
   }
@@ -53,17 +70,12 @@ berry <- function(type,specific="",limit=100){
         }
 }
 ```
-```
-#testing
-out<- berry(type="berry",specific = "cheri")
-new <- berry(type = "firmness",specific = "soft")
-fin <- berry(type = "flavor",specific ="spicy" )
 
-```
 
 
 ##Moves
-```{r}
+This function is designed to extract information on moves, the `type` variable allows for information to be extracted based upon move, category, or class. In addition the `specific` variable when not specificed extracts data on the different subvariables. When `specific` is specified, as one of the subvariables, more detailed information can be extracted. The `val` variable allows for highly detailed information to be extracted about a particular move 
+```{r move}
 move <- function(type,specific="",val="",limit=1000){
   if(!is_character(type) || !is_character(val)){
     stop("Error: Must be string")
@@ -73,7 +85,8 @@ move <- function(type,specific="",val="",limit=1000){
   link<-paste0(base,specific,"/?limit=",limit)
   a<- GET(link)
   r<- fromJSON((rawToChar(a$content)))
-  if(val != ""){return(unlist(r[val]))}
+  if(val != ""){return(unlist(r[[val]]))}
+  if(specific != ""){return(r)}
   return(r$results)
   }else if(type == "category"){
       base <- "https://pokeapi.co/api/v2/move-category/"
@@ -94,15 +107,11 @@ move <- function(type,specific="",val="",limit=1000){
   }
 }
 ```
-```
-#testing
-au <- move(type="move",specific = "overheat", val="accuracy")
-bu <- move(type="category",specific = "damage")
-a <- move(type="move",specific = "overheat", val="power")
-```
+
 
 ##Pokemon
-```{r}
+This function is designed to extract information on pokemon, the `type` variable allows for information to be extracted based upon ability, pokemon, or stat of interest. In addition the `specific` variable when not specificed extracts data on the different subvariables. When `specific` is specified, as one of the subvariables, more detailed information can be extracted. In addition, the `inc` variable allows the user to specify if they would like the stats results to be in increasing order.
+```{r pokemon}
   pokemon <- function(type,specific="",inc=TRUE,limit=1000){
     if(!is_character(type)){
       stop("Error: Must be string")
@@ -139,18 +148,10 @@ a <- move(type="move",specific = "overheat", val="power")
   
 ```
 
-```
-  z<-pokemon(type="stats",specific = "attack")
-  temp <- "https://pokeapi.co/api/v2/ability/"
-  temp2 <- "https://pokeapi.co/api/v2/ability/stench"
-  a <- GET(temp3)
-  b <- fromJSON((rawToChar(a$content)))
-  temp3<- "https://pokeapi.co/api/v2/stat/"
-```
-
 
 ##Wrapper
-```{r}
+This wrapper function is designed so that only a single function needs to be called with the function of interest and any other inputs specified.
+```{r wrapper}
   API_Wrapper <- function(fun,...){
     if(!is_character(fun)){
     stop("Error: Must be string for function")
@@ -170,3 +171,60 @@ a <- move(type="move",specific = "overheat", val="power")
 ```
 
 #Exploratory Data Analysis
+We are interested in specifics about the various moves in the pokemon game. We start by collecting a list of the first 50 moves and then determining the accuracy, power, and pp.
+```{r}
+all_moves<-API_Wrapper("move",type="move",limit=250)[,1]
+#all_moves
+accuracy<-sapply(X=all_moves,API_Wrapper,fun="move",type="move",val="accuracy")
+accuracy <- ResultsToDataframe(accuracy)
+
+power1 <- sapply(X=all_moves,API_Wrapper,fun="move",type="move",val="power")
+power1 <- ResultsToDataframe(power1)
+
+pp <- sapply(X=all_moves,API_Wrapper,fun="move",type="move",val="pp")
+pp<-ResultsToDataframe(pp)
+data<- cbind(accuracy,power1,pp)
+colnames(data)<- c("accuracy","power","pp")
+
+```
+
+Next we can create some new variables that give us an insight into the effective power a move by accounting for limitations in power, accuracy and/or number of available uses.
+```{r, datawork}
+data <- data %>% mutate(effectivePower = power/accuracy)
+```
+
+
+```{r, scatter}
+  g<-ggplot(data,aes(effectivePower,pp))
+  g+geom_point()
+  
+  h<- ggplot(data,aes(accuracy))
+  h+geom_histogram()
+```
+```{r berries}
+berries <- API_Wrapper("berry",type="berry",limit=50)[,1]
+size <- sapply(X=berries, API_Wrapper,fun="berry",type="berry",val="size")
+size<-ResultsToDataframe(size)
+
+growth <- sapply(X=berries, API_Wrapper,fun="berry",type="berry",val="growth_time")
+growth<-ResultsToDataframe(growth)
+
+harvest <- sapply(X=berries, API_Wrapper,fun="berry",type="berry",val="max_harvest")
+harvest<-ResultsToDataframe(harvest)
+data2 <- cbind(size,growth,harvest)
+colnames(data2) <- c("size","growth","harvest")
+
+```
+```{r boxplot}
+#variable for growth classes
+data2 <- data2 %>% mutate(class=if_else(growth >15,"fast",if_else(growth >10,"average",if_else(growth > 5,"slow","very slow"))))
+g<-ggplot(data2,aes(size, group=class))
+g+geom_boxplot()
+
+
+```
+
+
+
+
+
