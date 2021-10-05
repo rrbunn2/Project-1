@@ -3,7 +3,7 @@ title: "Pokemon API"
 author: "Ryan Bunn"
 ---
 
-This page is a vignette showing the retrevial of data from the Pokemon API found at [https://pokeapi.co/]
+This page is a vignette showing the retrevial of data from the Pokemon API found at [https://pokeapi.co/]. The API accessing functions are designed to hopefully be able to return general data that can be used as additional arguements to the function to return more specific data.
 
 #Required Packages
 For obtaining information from the Pokemon API and the subsequent data analysis the following packages were used
@@ -24,6 +24,7 @@ library(ggplot2)
 ##Results Dataframe
 As the API functions are designed to be used on a single variable input these functions can take in the results from a `lapply` of the API accessing functions and turn them into a nice dataframe.
 ```{r dataframe}
+  #Returns numerics as a nicer dataframe
   ResultsToDataframe<- function(object){
     object<-as.numeric(as.character(object))
     object<-unlist(object)
@@ -31,32 +32,33 @@ As the API functions are designed to be used on a single variable input these fu
     object[sapply(object, is.na)] = 0
     return(object)
   }
+  #returns a deeper level item
   depth2<- function(value){
     value <-unlist(value)
     value <-value[c(TRUE,FALSE)]
     return(value)
   }
-  removeNull <- function(x, func=function(x) if(is.null(x)) NA else x)
-{
-  if(is.list(x))
-  {
-    lapply(x, removeNull, func)
-  } else
-  {
-    func(x)
-  }
+  #removes null values and replaces them with NA as unlist() deletes null values
+  removeNull <- function(x, func=function(x) if(is.null(x)) NA else x){
+      if(is.list(x)){
+      lapply(x, removeNull, func)
+    } else{
+        func(x)
+    }
 }
 ```
 
 ##Berries
 This function is designed to extract information on berries, the `type` variable allows for information to be extracted based upon berry type, firmness, or flavor. In addition the `specific` variable when not specificed extracts data on the different subvariables. When `specific` is specified, as one of the subvariables, more detailed information can be extracted. In addition, the `val` variable allows for highly detailed information to be extracted about a particular berry. Finally the limit variable allows us to limit the number of results as needed.
 ```{r berry}
+#Primary function for finding berry information
 berry <- function(type,specific="",val="",limit=100){
   limit = as.character(limit)
   if(!is_character(type)){
     stop("Error: Must be string")
   }
   base <- "https://pokeapi.co/api/v2"
+  #Queries the API based upon berry endpoint
   if(type=="berry"){
     hyperlink <- paste0(base,"/berry/",specific,"/?limit=",limit)
     a<-GET(hyperlink)
@@ -67,6 +69,7 @@ berry <- function(type,specific="",val="",limit=100){
     else{
       return(data$results)}
   }
+  #Queries the API based upon firmness endpoint
     else if (type=="firmness"){
       hyperlink <- paste0(base,"/berry-firmness/",specific,"/?limit=",limit)
       a<-GET(hyperlink)
@@ -75,7 +78,8 @@ berry <- function(type,specific="",val="",limit=100){
     return(data$berries)}
     else{
       return(data$results)}
-  }
+    }
+  #Queries the API based upon flavor endpoint
       else if(type=="flavor"){
         hyperlink <- paste0(base,"/berry-flavor/",specific,"/?limit=",limit)
         a<-GET(hyperlink)
@@ -84,7 +88,8 @@ berry <- function(type,specific="",val="",limit=100){
     return(data$berries)}
     else{
       return(data$results)}
-  }
+      }
+        #Catches and issues
         else{
           stop("Error: Must be one of berry,firmness,flavor")
         }
@@ -96,10 +101,12 @@ berry <- function(type,specific="",val="",limit=100){
 ##Moves
 This function is designed to extract information on moves, the `type` variable allows for information to be extracted based upon move, category, or class. In addition the `specific` variable when not specificed extracts data on the different subvariables. When `specific` is specified, as one of the subvariables, more detailed information can be extracted. The `val` variable allows for highly detailed information to be extracted about a particular move. Finally the limit variable allows us to limit the number of results as needed.
 ```{r move}
+#Primary function for finding move information
 move <- function(type,specific="",val="",val2="",limit=1000){
   if(!is_character(type) || !is_character(val)){
     stop("Error: Must be string")
   }
+  #Queries the API based upon move endpoint
   if(type == "move"){
   base <- "https://pokeapi.co/api/v2/move/"
   link<-paste0(base,specific,"/?limit=",limit)
@@ -108,6 +115,7 @@ move <- function(type,specific="",val="",val2="",limit=1000){
   if(val != ""){return(unlist(r[[val]]))}
   if(specific != ""){return(r)}
   return(r$results)
+  #Queries the API based upon move category endpoint
   }else if(type == "category"){
       base <- "https://pokeapi.co/api/v2/move-category/"
       link<-paste0(base,specific,"/?limit=",limit)
@@ -115,6 +123,7 @@ move <- function(type,specific="",val="",val2="",limit=1000){
       r<- fromJSON((rawToChar(a$content)))
       if(specific != "") return(r$moves)
       else{return(r$results)}
+    #Queries the API based upon damage class endpoint
   } else  if(type == "class"){
     base <- "https://pokeapi.co/api/v2/move-damage-class/"
     link<-paste0(base,specific,"/?limit=",limit)
@@ -125,6 +134,7 @@ move <- function(type,specific="",val="",val2="",limit=1000){
       return(r$moves)}
     else{return(r$results)}
   } else {
+    #catches any issues
     stop("Error: Must be one of move,category,class")
   }
 }
@@ -134,11 +144,12 @@ move <- function(type,specific="",val="",val2="",limit=1000){
 ##Pokemon
 This function is designed to extract information on pokemon, the `type` variable allows for information to be extracted based upon ability, pokemon, or stat of interest. In addition the `specific` variable when not specificed extracts data on the different subvariables. When `specific` is specified, as one of the subvariables, more detailed information can be extracted.The `val` variable allows for highly detailed information to be extracted about a particular pokemon. `val2` and `val3` are used with the pokemon endpoint to travel deeper into the provided data. In addition, the `inc` variable allows the user to specify if they would like the stats results to be in increasing order. Finally the limit variable allows us to limit the number of results as needed.
 ```{r pokemon}
+#Primary function for finding pokemon information
   pokemon <- function(type,specific="",val="",val2="",val3="",inc=TRUE,limit=1000){
     if(!is_character(type)){
       stop("Error: Must be string")
     } 
-  
+    #Queries the API based upon ability endpoint
     if(type=="ability"){
       base <- "https://pokeapi.co/api/v2/ability/"
       link <- paste0(base,specific,"/?limit=",limit)
@@ -147,6 +158,7 @@ This function is designed to extract information on pokemon, the `type` variable
       if(specific != ""){return(r$pokemon)}
       return(r)
     }
+    #Queries the API based upon pokemon endpoint
     if(type == "pokemon"){
       base <- "https://pokeapi.co/api/v2/pokemon/"
       link <- paste0(base,specific,"/?limit=",limit)
@@ -161,6 +173,7 @@ This function is designed to extract information on pokemon, the `type` variable
       if(specific!= ""){return(r$weight)}
       else {return(r$results)}
     }
+    #Queries the API based upon stats endpoint
     if(type == "stats"){
       base <- "https://pokeapi.co/api/v2/stat/"
       link <- paste0(base,specific,"/?limit=",limit)
@@ -180,6 +193,7 @@ This function is designed to extract information on pokemon, the `type` variable
 ##Wrapper
 This wrapper function is designed so that only a single function needs to be called with the function of interest and any other inputs specified.
 ```{r wrapper}
+#Wrapper function that makes accessing more general
   API_Wrapper <- function(fun,...){
     if(!is_character(fun)){
     stop("Error: Must be string for function")
@@ -193,6 +207,7 @@ This wrapper function is designed so that only a single function needs to be cal
         else if(fun=="pokemon"){
           pokemon(...)
         }
+    #catches any issues
           else{
             stop("Error: fun must be one of berry, move, pokemon")}
   }
@@ -201,9 +216,9 @@ This wrapper function is designed so that only a single function needs to be cal
 #Exploratory Data Analysis
 ##Moves
 We are interested in specifics about the various moves in the pokemon game. We start by collecting a list of the first 250 moves and then determining the accuracy, power, pp, and damage class.
-```{r moves}
+```{r moves, warning=FALSE}
 all_moves<-API_Wrapper("move",type="move",limit=1000)[,1]
-#all_moves
+
 accuracy<-sapply(X=all_moves,API_Wrapper,fun="move",type="move",val="accuracy")
 accuracy <- ResultsToDataframe(accuracy)
 
@@ -241,6 +256,7 @@ We can then make some comparisons between the effective power and the number of 
   g<-ggplot(data,aes(effectivePower,pp))
   g+geom_point(aes(color=class))+labs(x="Effective Power",y="PP",title = "Effective Power vs PP by Class")
 ```
+
 Observing the scatterplot we see that a high effective power seems to guarantee a low PP value, but a low PP value does not guarentee a high effective power. We also see that the status class sticks to the 0 effective power, which mirrors the results seen summary table before.
 
 
@@ -249,6 +265,7 @@ Next we can look at the distribution of accuracy across moves
   h<- ggplot(data,aes(accuracy))
   h+geom_histogram(fill="red")+labs(title="Histogram of Accuracy")
 ```
+
 Our histogram tells us that the most moves generally fall under 0 accuracy(accuracy irrelevent) or 100 accuracy and very few elements have an accuracy in between. It may be interesting to see in future analysis how the type and/or effective power factor into accuracy values.
 
 
@@ -283,6 +300,7 @@ data2 <- data2 %>% mutate(g_class=if_else(growth >15,"fast",if_else(growth >10,"
 i<-ggplot(data2,aes(size, group=g_class))
 i+geom_boxplot(aes(fill=g_class))+coord_flip()+labs(x="Size",title = "Boxplots of Size by Growth Group")+scale_fill_discrete(name="Growth Group")
 ```
+
 Observing our parrallel boxplots we see that the average growth speed has the largest size with the very slow speed have a much smaller size. We also see that the fast speed have a small size similar. It may be interesting to see if there is a significant difference statistically between any of the groups.
 
 
@@ -292,6 +310,7 @@ Then we can create a barplot with information on firmness counts subdivided by g
 j<- ggplot(data2,aes(firmness))
 j+geom_bar(aes(fill=g_class),position = "dodge")+labs(x="Firmness",y="Quantity",title="Barplot of Firmness grouped by Growth Group")+scale_fill_discrete(name="Growth Group")
 ```
+
 The bar graph does not seem to reveal any replationship between the firmness of the berries and the growth group to which the berry belongs.
 
 
@@ -330,7 +349,8 @@ We can even look at a barplot of the various types of pokemon.
 k<-ggplot(data3,aes(type))
 k+geom_bar(aes(fill=type))+theme(axis.text.x = element_text(angle=45))+labs(x="Pokemon Main Type",y="Count",title="Quantity in each Pokemon Main Type")+guides(fill="none")
 ```
-observing the barplot we see that water and normal are the developers favorite main pokemon types. This may or may not be due to pokemon in ocean locations have exclusively water main elements. It may be interesting to see if this is the reason for the large number of water type pokemon.
+
+Observing the barplot we see that water and normal are the developers favorite main pokemon types. This may or may not be due to pokemon in ocean locations have exclusively water main elements. It may be interesting to see if this is the reason for the large number of water type pokemon.
 
 
 Finally we can create a scatterplot of height vs weight grouped by the pokemon type, we specifically exclude the pokemon with height values over 200 to get a better look at the data
@@ -339,6 +359,7 @@ data4 <- data3 %>% filter(height < 200)
 l <- ggplot(data4,aes(height,weight))
 l+geom_point(aes(color=type))+labs(title="Height vs Weight by Main Type",x="Height",y="Weight")+theme(legend.key.height = unit(.35, 'cm'))
 ```
+
 Here we see the data is somewhat difficult to interpret so it may be beneficial to look at each type individually. It also may be interesting to see if a prediction can be made for height using type and weight.
 
 
